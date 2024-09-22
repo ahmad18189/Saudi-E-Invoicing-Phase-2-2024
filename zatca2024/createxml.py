@@ -458,7 +458,10 @@ def tax_Data(invoice,sales_invoice_doc):
                     tax_amount_without_retention_sar =  round(abs(get_tax_total_from_items(sales_invoice_doc)),2)
                     cbc_TaxAmount_SAR.text = str(round( tax_amount_without_retention_sar,2))     # str( abs(sales_invoice_doc.base_total_taxes_and_charges))
                 #end for SAR currency
-                
+                try : 
+                    tax_rat_temp = sales_invoice_doc["taxes"][0]["rate"]
+                except :
+                    tax_rat_temp = 15.00
                 
         
                 cac_TaxTotal = ET.SubElement(invoice, "cac:TaxTotal")
@@ -479,7 +482,7 @@ def tax_Data(invoice,sales_invoice_doc):
                 cbc_ID_8.text =  "S"
                 cbc_Percent_1 = ET.SubElement(cac_TaxCategory_1, "cbc:Percent")
                 # cbc_Percent_1.text = str(sales_invoice_doc.taxes[0].rate)
-                cbc_Percent_1.text = "{:.2f}".format(float(sales_invoice_doc["taxes"][0]["rate"]))                
+                cbc_Percent_1.text = "{:.2f}".format(float(tax_rat_temp))                
                 cac_TaxScheme_3 = ET.SubElement(cac_TaxCategory_1, "cac:TaxScheme")
                 cbc_ID_9 = ET.SubElement(cac_TaxScheme_3, "cbc:ID")
                 cbc_ID_9.text = "VAT"
@@ -488,7 +491,16 @@ def tax_Data(invoice,sales_invoice_doc):
                 # cbc_TaxAmount = ET.SubElement(cac_TaxTotal, "cbc:TaxAmount")
                 # cbc_TaxAmount.set("currencyID", sales_invoice_doc.currency)
                 # cbc_TaxAmount.text =str(round(tax_amount_without_retention,2))
+                try :
+                    net_total = sales_invoice_doc["net_total"]
+                except:
+                    sales_invoice_doc["net_total"] = sales_invoice_doc["total_taxable_amount"]
                 
+                try :
+                    base_change_amount = sales_invoice_doc["base_change_amount"]
+                except:
+                    sales_invoice_doc["base_change_amount"] = 0
+
                 cac_LegalMonetaryTotal = ET.SubElement(invoice, "cac:LegalMonetaryTotal")
                 cbc_LineExtensionAmount = ET.SubElement(cac_LegalMonetaryTotal, "cbc:LineExtensionAmount")
                 cbc_LineExtensionAmount.set("currencyID", sales_invoice_doc["currency"])
@@ -518,7 +530,10 @@ def get_tax_total_from_items(sales_invoice_doc):
                     total_tax = total_tax + (single_item["net_amount"] * (tax_percent/100))
                 return total_tax 
             except Exception as e:
-                    frappe.throw("Error occured in get_tax_total_from_items "+ str(e) )
+                    try:
+                        return sales_invoice_doc["vat"]
+                    except:
+                        frappe.throw("Error occured in get_tax_total_from_items "+ str(e) )
 
 def item_data(invoice,sales_invoice_doc):
             try:
@@ -557,7 +572,43 @@ def item_data(invoice,sales_invoice_doc):
                     cbc_PriceAmount.text =  str(abs(single_item["net_rate"]))
                     
                 return invoice
-            except Exception as e:
+            except :
+                try : 
+                    for single_item in sales_invoice_doc["records"] : 
+                        item_tax_percentage = 15
+                        cac_InvoiceLine = ET.SubElement(invoice, "cac:InvoiceLine")
+                        cbc_ID_10 = ET.SubElement(cac_InvoiceLine, "cbc:ID")
+                        cbc_ID_10.text = str(single_item["idx"])
+                        cbc_InvoicedQuantity = ET.SubElement(cac_InvoiceLine, "cbc:InvoicedQuantity")
+                        cbc_InvoicedQuantity.set("unitCode", str("unit"))
+                        cbc_InvoicedQuantity.text = str(abs(single_item["count"]))
+                        cbc_LineExtensionAmount_1 = ET.SubElement(cac_InvoiceLine, "cbc:LineExtensionAmount")
+                        cbc_LineExtensionAmount_1.set("currencyID", sales_invoice_doc["currency"])
+                        cbc_LineExtensionAmount_1.text=  str(abs(single_item["value"]))
+                        cac_TaxTotal_2 = ET.SubElement(cac_InvoiceLine, "cac:TaxTotal")
+                        cbc_TaxAmount_3 = ET.SubElement(cac_TaxTotal_2, "cbc:TaxAmount")
+                        cbc_TaxAmount_3.set("currencyID", sales_invoice_doc["currency"])
+                        cbc_TaxAmount_3.text = str(abs(round(item_tax_percentage * single_item["value"] / 100,2)))
+                        cbc_RoundingAmount = ET.SubElement(cac_TaxTotal_2, "cbc:RoundingAmount")
+                        cbc_RoundingAmount.set("currencyID", sales_invoice_doc["currency"])
+                        cbc_RoundingAmount.text=str(abs(round(single_item["value"] + (item_tax_percentage * single_item["value"] / 100),2)))
+                        cac_Item = ET.SubElement(cac_InvoiceLine, "cac:Item")
+                        cbc_Name = ET.SubElement(cac_Item, "cbc:Name")
+                        cbc_Name.text = single_item["description"]
+                        cac_ClassifiedTaxCategory = ET.SubElement(cac_Item, "cac:ClassifiedTaxCategory")
+                        cbc_ID_11 = ET.SubElement(cac_ClassifiedTaxCategory, "cbc:ID")
+                        cbc_ID_11.text = "S"
+                        cbc_Percent_2 = ET.SubElement(cac_ClassifiedTaxCategory, "cbc:Percent")
+                        cbc_Percent_2.text = f"{float(item_tax_percentage):.2f}"
+                        cac_TaxScheme_4 = ET.SubElement(cac_ClassifiedTaxCategory, "cac:TaxScheme")
+                        cbc_ID_12 = ET.SubElement(cac_TaxScheme_4, "cbc:ID")
+                        cbc_ID_12.text = "VAT"
+                        cac_Price = ET.SubElement(cac_InvoiceLine, "cac:Price")
+                        cbc_PriceAmount = ET.SubElement(cac_Price, "cbc:PriceAmount")
+                        cbc_PriceAmount.set("currencyID", sales_invoice_doc["currency"])
+                        cbc_PriceAmount.text =  str(abs(single_item["total"]))
+                    return invoice
+                except Exception as e:
                     frappe.throw("error occured in item data"+ str(e) )
 
 def xml_structuring(invoice,sales_invoice_doc):
