@@ -742,22 +742,22 @@ def zatca_Background_on_submit(doc, method=None):
                         invoice_number = sales_invoice_doc.name
                         settings = frappe.get_doc('Zatca setting')
                         
-                        if settings.zatca_invoice_enabled != 1:
-                            frappe.throw("Zatca Invoice is not enabled in Zatca Settings, Please contact your system administrator")
-                        
-                        if not frappe.db.exists("Sales Invoice", invoice_number):
-                                frappe.throw("Please save and submit the invoice before sending to Zatca:  " + str(invoice_number))
+                        if settings.zatca_invoice_enabled == 1:
                                 
-                        sales_invoice_doc= frappe.get_doc("Sales Invoice",invoice_number )
-            
-                        if sales_invoice_doc.docstatus in [0,2]:
-                            frappe.throw("Please submit the invoice before sending to Zatca:  " + str(invoice_number))
                             
-                        if sales_invoice_doc.custom_zatca_status == "REPORTED" or sales_invoice_doc.custom_zatca_status == "CLEARED":
-                            frappe.throw("Already submitted to Zakat and Tax Authority")
-                        
-                        zatca_Call(invoice_number,0)
-                        
+                            if not frappe.db.exists("Sales Invoice", invoice_number):
+                                    frappe.throw("Please save and submit the invoice before sending to Zatca:  " + str(invoice_number))
+                                    
+                            sales_invoice_doc= frappe.get_doc("Sales Invoice",invoice_number )
+                
+                            if sales_invoice_doc.docstatus in [0,2]:
+                                frappe.throw("Please submit the invoice before sending to Zatca:  " + str(invoice_number))
+                                
+                            if sales_invoice_doc.custom_zatca_status == "REPORTED" or sales_invoice_doc.custom_zatca_status == "CLEARED":
+                                frappe.throw("Already submitted to Zakat and Tax Authority")
+                            
+                            zatca_Call(invoice_number,0)
+                            
                     except Exception as e:
                         frappe.throw("Error in background call:  " + str(e) )
                     

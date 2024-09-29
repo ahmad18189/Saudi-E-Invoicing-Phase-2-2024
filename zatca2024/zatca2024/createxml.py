@@ -252,7 +252,7 @@ def doc_Reference_compliance(invoice,sales_invoice_doc,invoice_number, complianc
                     cac_BillingReference = ET.SubElement(invoice, "cac:BillingReference")
                     cac_InvoiceDocumentReference = ET.SubElement(cac_BillingReference, "cac:InvoiceDocumentReference")
                     cbc_ID13 = ET.SubElement(cac_InvoiceDocumentReference, "cbc:ID")
-                    cbc_ID13.text = "6666666"  # field from return against invoice. 
+                    cbc_ID13.text = sales_invoice_doc.return_against  # field from return against invoice. 
                 
                 cac_AdditionalDocumentReference = ET.SubElement(invoice, "cac:AdditionalDocumentReference")
                 cbc_ID_1 = ET.SubElement(cac_AdditionalDocumentReference, "cbc:ID")
@@ -348,10 +348,16 @@ def customer_Data(invoice,sales_invoice_doc):
                 cbc_ID_4 = ET.SubElement(cac_PartyIdentification_1, "cbc:ID")
                 cbc_ID_4.set("schemeID", "CRN")
                 cbc_ID_4.text =customer_doc.tax_id
+                address =None
                 if int(frappe.__version__.split('.')[0]) == 15:
-                    address = frappe.get_doc("Address", customer_doc.customer_primary_address)    
+                    if customer_doc.customer_primary_address:
+                        address = frappe.get_doc("Address", customer_doc.customer_primary_address)    
                 else:
                     address = frappe.get_doc("Address", sales_invoice_doc.company_address)
+                
+                if not address or address.get('name') == "":
+                    address = frappe.get_doc("Address", sales_invoice_doc.company_address)
+
                 cac_PostalAddress_1 = ET.SubElement(cac_Party_2, "cac:PostalAddress")
                 cbc_StreetName_1 = ET.SubElement(cac_PostalAddress_1, "cbc:StreetName")
                 cbc_StreetName_1.text = address.address_line1
