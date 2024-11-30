@@ -302,7 +302,7 @@ def company_Data(invoice,sales_invoice_doc):
                 cac_PartyIdentification = ET.SubElement(cac_Party_1, "cac:PartyIdentification")
                 cbc_ID_2 = ET.SubElement(cac_PartyIdentification, "cbc:ID")
                 cbc_ID_2.set("schemeID", "CRN")
-                cbc_ID_2.text =company_doc.tax_id   # COmpany CR - Need to have a field in company doctype called company_registration 
+                cbc_ID_2.text =company_doc.company_registration   # COmpany CR - Need to have a field in company doctype called company_registration 
                 address_list = frappe.get_list("Address", filters={"is_your_company_address": "1"}, fields=["address_line1", "address_line2","city","pincode","state"])
                 if len(address_list) == 0:
                     frappe.throw("Zatca requires proper address. Please add your company address in address master")
@@ -334,7 +334,7 @@ def company_Data(invoice,sales_invoice_doc):
                 cbc_ID_3.text = "VAT"
                 cac_PartyLegalEntity = ET.SubElement(cac_Party_1, "cac:PartyLegalEntity")
                 cbc_RegistrationName = ET.SubElement(cac_PartyLegalEntity, "cbc:RegistrationName")
-                cbc_RegistrationName.text = sales_invoice_doc.company
+                cbc_RegistrationName.text = company_doc.company_name_in_arabic
                 return invoice
             except Exception as e:
                     frappe.throw("error occured in company data"+ str(e) )
