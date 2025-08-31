@@ -21,7 +21,7 @@ import requests
 from frappe.utils.data import  get_time
 import base64
 import pyqrcode
-
+from frappe.exceptions import TimestampMismatchError
 
 def clean_up_certificate_string(certificate_string):
     return certificate_string.replace("-----BEGIN CERTIFICATE-----\n", "").replace("-----END CERTIFICATE-----", "").strip()
@@ -106,6 +106,7 @@ def generate_csr():
                             "content": get_csr 
                             })
                     file.save(ignore_permissions=True)
+                    frappe.db.commit() 
                     frappe.msgprint("CSR generation successful. CSR saved")
                 except Exception as e:
                     frappe.throw(err)
@@ -163,9 +164,15 @@ def create_CSID():
                         file.write(base64.b64decode(data["binarySecurityToken"]).decode('utf-8'))
 
                     settings.set("basic_auth", encoded_value)
-                    settings.save(ignore_permissions=True)
                     settings.set("compliance_request_id",data["requestID"])
-                    settings.save(ignore_permissions=True)
+                    
+                    try:
+                        settings.save(ignore_permissions=True)
+                    except TimestampMismatchError:
+                        frappe.msgprint("The document was modified by another user. Reloading the latest version.")
+                        settings.reload()
+                        settings.save(ignore_permissions=True)
+                    frappe.db.commit() 
                 except Exception as e:
                             frappe.throw("error in csid formation: " + str(e))
 
@@ -325,7 +332,14 @@ def production_CSID():
                     with open(f"cert.pem", 'w') as file:   #attaching X509 certificate
                         file.write(base64.b64decode(data["binarySecurityToken"]).decode('utf-8'))
                     settings.set("basic_auth_production", encoded_value)
-                    settings.save(ignore_permissions=True)
+                    
+                    try:
+                        settings.save(ignore_permissions=True)
+                    except TimestampMismatchError:
+                        frappe.msgprint("The document was modified by another user. Reloading the latest version.")
+                        settings.reload()
+                        settings.save(ignore_permissions=True)
+                    frappe.db.commit() 
                 except Exception as e:
                     frappe.throw("error in  production csid formation:  " + str(e) )
 
@@ -374,6 +388,7 @@ def attach_QR_Image_For_Reporting(qr_code_value,sales_invoice_doc):
                                
                             })
                             file.save(ignore_permissions=True)
+                            frappe.db.commit() 
                     except Exception as e:
                         frappe.throw("Error in qr image attach for reporting api   " + str(e))   
 
@@ -437,7 +452,15 @@ def reporting_API(uuid1,hash_value,signed_xmlfile_name,invoice_number,sales_invo
                                 msg = msg + "Zatca Response: " + response.text + "<br><br> "
                                 frappe.msgprint(msg)
                                 settings.pih = hash_value
-                                settings.save(ignore_permissions=True)
+                                frappe.db.commit() 
+                                
+                                try:
+                                    settings.save(ignore_permissions=True)
+                                except TimestampMismatchError:
+                                    frappe.msgprint("The document was modified by another user. Reloading the latest version.")
+                                    settings.reload()
+                                    settings.save(ignore_permissions=True)
+                                frappe.db.commit() 
                                 
                                 invoice_doc = frappe.get_doc('Sales Invoice' , invoice_number )
                                 invoice_doc.db_set('custom_uuid' , uuid1 , commit=True  , update_modified=True)
@@ -517,7 +540,14 @@ def clearance_API(uuid1,hash_value,signed_xmlfile_name,invoice_number,sales_invo
                                 msg = msg + "Zatca Response: " + response.text + "<br><br> "
                                 frappe.msgprint(msg)
                                 settings.pih = hash_value
-                                settings.save(ignore_permissions=True)
+                                
+                                try:
+                                    settings.save(ignore_permissions=True)
+                                except TimestampMismatchError:
+                                    frappe.msgprint("The document was modified by another user. Reloading the latest version.")
+                                    settings.reload()
+                                    settings.save(ignore_permissions=True)
+                                frappe.db.commit() 
                                 
                                 invoice_doc = frappe.get_doc('Sales Invoice' , invoice_number )
                                 invoice_doc.db_set('custom_uuid' , uuid1 , commit=True  , update_modified=True)
@@ -537,6 +567,7 @@ def clearance_API(uuid1,hash_value,signed_xmlfile_name,invoice_number,sales_invo
                                     
                                 })
                                 file.save(ignore_permissions=True)
+                                frappe.db.commit() 
                                 # frappe.msgprint(xml_cleared)
                                 success_Log(response.text,uuid1, invoice_number)
                                 return xml_cleared
@@ -573,6 +604,7 @@ def attach_QR_Image_For_Clearance(xml_cleared,sales_invoice_doc):
                            
                         })
                         file.save(ignore_permissions=True)
+                        frappe.db.commit() 
                     except Exception as e:
                         frappe.throw("error in qrcode from cleared xml:  " + str(e) )
 
